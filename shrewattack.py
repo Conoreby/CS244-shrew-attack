@@ -108,18 +108,18 @@ parser.add_argument('--iperf',
                     required=True)
 
 parser.add_argument('--period',
-		    dest="period",
-		    type=float,
+		            dest="period",
+		            type=float,
                     action="store",
-		    help="Period between attacks in sec",
-		    required=True)
+		            help="Period between attacks in sec",
+		            required=True)
 
 parser.add_argument('--length',
-		    dest="length",
-		    type=float,
-		    action="store",
-		    help="Length of attack in ms",
-		    required=True)
+		            dest="length",
+		            type=float,
+		            action="store",
+		            help="Length of attack in ms",
+		            required=True)
 
 # Expt parameters
 args = parser.parse_args()
@@ -165,6 +165,12 @@ def start_tcpprobe():
 
 def stop_tcpprobe():
     os.system("killall -9 cat; rmmod tcp_probe &>/dev/null;")
+
+def start_bwmon(iface, interval_sec=0.1, outfile="bw.txt"):
+    monitor = Process(target=monitor_devs,
+                      args=(iface, interval_sec, outfile))
+    monitor.start()
+    return monitor
 
 
 
@@ -288,11 +294,15 @@ def main():
     cprint("Starting experiment", "green")
 
     start_senders(net)
-    monitor_devs(dev_pattern='s0-eth2', fname="%s/txrate.txt" % args.dir, interval_sec=0.1)
+    #bwmon = start_bwmon(iface='s0-eth2', outfile="{0}/{1}-txrate.txt".format(args.dir, args.period))
+
+    #monitor_devs(dev_pattern='s0-eth2', fname="{0}/{1}-txrate.txt".format(args.dir, args.period), interval_sec=0.1)
     #monitor_devs_ng(fname="%s/txrate.txt" % args.dir, interval_sec=0.1)
     start_attacker(net)
 
     cprint("I escaped", "red")
+
+    sleep(30)
 
 
     #TODO: measure the throughput of the normal flow(s)
@@ -304,6 +314,7 @@ def main():
     net.stop()
     Popen("killall -9 top bwm-ng tcpdump cat mnexec", shell=True).wait()
     stop_tcpprobe()
+    #bwmon.terminate()
     end = time()
 
 if __name__ == '__main__':
