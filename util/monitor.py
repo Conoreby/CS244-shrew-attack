@@ -53,6 +53,7 @@ def monitor_devs(dev_pattern='^s', fname="%s/bytes_sent.txt" %
        devices whose name matches @dev_pattern and writes to @fname"""
     pat = re.compile(dev_pattern)
     spaces = re.compile('\s+')
+    print "This is the file name %s" % fname
     open(fname, 'w').write('')
     prev_tx = {}
     while 1:

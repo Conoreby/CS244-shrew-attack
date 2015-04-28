@@ -168,7 +168,7 @@ def stop_tcpprobe():
 
 def start_bwmon(iface, interval_sec=0.1, outfile="bw.txt"):
     monitor = Process(target=monitor_devs,
-                      args=(iface, interval_sec, outfile))
+                      args=(iface, outfile, interval_sec))
     monitor.start()
     return monitor
 
@@ -294,7 +294,7 @@ def main():
     cprint("Starting experiment", "green")
 
     start_senders(net)
-    #bwmon = start_bwmon(iface='s0-eth2', outfile="{0}/{1}-txrate.txt".format(args.dir, args.period))
+    bwmon = start_bwmon(iface='s0-eth2', outfile="{0}/{1}-txrate.txt".format(args.dir, args.period))
 
     #monitor_devs(dev_pattern='s0-eth2', fname="{0}/{1}-txrate.txt".format(args.dir, args.period), interval_sec=0.1)
     #monitor_devs_ng(fname="%s/txrate.txt" % args.dir, interval_sec=0.1)
@@ -314,7 +314,7 @@ def main():
     net.stop()
     Popen("killall -9 top bwm-ng tcpdump cat mnexec", shell=True).wait()
     stop_tcpprobe()
-    #bwmon.terminate()
+    bwmon.terminate()
     end = time()
 
 if __name__ == '__main__':
