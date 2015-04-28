@@ -20,6 +20,7 @@ import socket
 import os
 from util.monitor import monitor_qlen
 from util.monitor import monitor_devs_ng
+from util.monitor import monitor_devs
 from util.helper import stdev
 
 
@@ -249,7 +250,7 @@ def start_senders(net):
     goodHost = net.get('goodHost')
     
     goodHost.cmd('touch {0}/output_file'.format(args.dir))
-    goodHost.popen('%s -c %s -p %s -t %d -i 1 -yc -Z %s > %s/%s' % (
+    goodHost.popen('%s -c %s -p %s -t %d -yc -Z %s > %s/%s' % (
             CUSTOM_IPERF_PATH, receiver.IP(), 5001, seconds, args.cong, args.dir, "output_file"),shell=True)
     return
 
@@ -287,9 +288,11 @@ def main():
     cprint("Starting experiment", "green")
 
     start_senders(net)
-
-    monitor_devs_ng("test", interval_sec=0.01)
+    monitor_devs(dev_pattern='s0-eth2', fname="%s/txrate.txt" % args.dir, interval_sec=0.1)
+    #monitor_devs_ng(fname="%s/txrate.txt" % args.dir, interval_sec=0.1)
     start_attacker(net)
+
+    cprint("I escaped", "red")
 
 
     #TODO: measure the throughput of the normal flow(s)
