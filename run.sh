@@ -22,16 +22,17 @@ plotpath=util
 iperf=~/iperf-patched/src/iperf
 
 for run in 1; do
-for period in #TODO: different period lengths; do
-	dir=#TODO: dirname
+for period in 1 2 3 4 5; do
+	dir=$rootdir/test
 
-	python buffersizing.py --bw-host 1000 \ #TODO: set value
+	python shrewattack.py --bw-host 15 \
 		--cong reno \
-		--bw-net 62.5 \ #TODO: set value
-		--delay 43.5 \ #TODO: set value
+		--bw-net 1.5 \
+		--delay 12 \
 		--dir $dir \
-		-n 3 \
-		--iperf $iperf
+		--iperf $iperf \
+		--period $period \
+		--length 0.150
 		#TODO: add extra necessary params
 
 	#TODO: Plot the correct results

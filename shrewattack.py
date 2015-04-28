@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-
 from mininet.topo import Topo
 from mininet.node import CPULimitedHost
 from mininet.link import TCLink
@@ -17,8 +16,10 @@ import termcolor as T
 from argparse import ArgumentParser
 
 import sys
+import socket
 import os
 from util.monitor import monitor_qlen
+from util.monitor import monitor_devs_ng
 from util.helper import stdev
 
 
@@ -88,13 +89,6 @@ parser.add_argument('--dir', '-d',
                     default="results",
                     required=True)
 
-parser.add_argument('-n',
-                    dest="n",
-                    type=int,
-                    action="store",
-                    help="Number of nodes in star.  Must be >= 3",
-                    required=True)
-
 
 parser.add_argument('--maxq',
                     dest="maxq",
@@ -121,7 +115,7 @@ parser.add_argument('--period',
 
 parser.add_argument('--length',
 		    dest="length",
-		    type=int,
+		    type=float,
 		    action="store",
 		    help="Length of attack in ms",
 		    required=True)
@@ -138,21 +132,29 @@ if not os.path.exists(args.dir):
 lg.setLogLevel('info')
 
 # Topology to be instantiated in Mininet
-class StarTopo(Topo):
-    "Star topology for Buffer Sizing experiment"
+class DOSTopo(Topo):
+    "DOS topology for Shrew Attack experiment"
 
-    def build(self, n=3, cpu=None, bw_host=None, bw_net=None,
+    def build(self, cpu=None, bw_host=None, bw_net=None,
 	      delay=None, maxq=None):
 	#TODO: Set up one regular host, one bad host, and shared reciever
 	# connected by a switch
-    switch = self.addSwitch('server')
-    server= self.addHost('server')
-    for h in range(n-1):
-        host = self.addHost('h%s' %(h+1)) #host should start at 1
-        self.addLink(host, switch, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
-    	return
-    host = self.addHost('attacker')
+    #switch = self.addSwitch('server')
+    #server= self.addHost('server')
+    #for h in range(n-1):
+    #    host = self.addHost('h%s' %(h+1)) #host should start at 1
+    #    self.addLink(host, switch, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
+    #	return
+    #host = self.addHost('attacker') 
     #not sure what parameters are for attacker link
+        switch = self.addSwitch('s0')
+        goodHost = self.addHost('goodHost')
+        badHost = self.addHost('badHost')
+        receiver = self.addHost('receiver')
+        self.addLink(receiver, switch, bw=bw_net, cpu=cpu, max_queue_size=maxq, delay=delay)
+        self.addLink(goodHost, switch, bw=bw_host, cpu=cpu, max_queue_size=maxq)
+        self.addLink(badHost, switch, bw=bw_host, cpu=cpu, max_queue_size=maxq)
+        return	
 
 def start_tcpprobe():
     "Install tcp_probe module and dump to file"
@@ -239,31 +241,39 @@ def start_receiver(net):
 # It will be very handy when debugging.  You are not required to
 # submit these in your final submission.
 
+#TODO: make this for multiple flows instead of the hard coded 1
 def start_senders(net):
     # Seconds to run iperf; keep this very high
     seconds = 3600
-    server = net.get('h0')
-    nflows = args.nflows * (args.n - 1)
+    receiver = net.get('receiver')
+    goodHost = net.get('goodHost')
     
-    for h in range(nflows):
-	hostNumber = (h % (args.n - 1)) + 1
-	host = net.get('h%s' % hostNumber)
-	host.cmd('touch {0}/output_file'.format(args.dir))
-        host.popen('%s -c %s -p %s -t %d -i 1 -yc -Z %s > %s/%s' % (
-            CUSTOM_IPERF_PATH, server.IP(), 5001, seconds, args.cong, args.dir, "output_file"),shell=True)
+    goodHost.cmd('touch {0}/output_file'.format(args.dir))
+    goodHost.popen('%s -c %s -p %s -t %d -i 1 -yc -Z %s > %s/%s' % (
+            CUSTOM_IPERF_PATH, receiver.IP(), 5001, seconds, args.cong, args.dir, "output_file"),shell=True)
     return
 
 #TODO: Start attack flow in a daemon thread to periodically 
 # send 
 def start_attacker(net):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM);
+	#TODO: what message to send
+    MESSAGE = '1' * 1440
+    while True:
+        sleep(args.period)
+        start = time()
+        #TODO: correct units?
+        while time() - start < args.length:
+            sock.sendto(MESSAGE, (net.get('receiver').IP(), 5001))
     return
+
 def main():
     "Create network and run Buffer Sizing experiment"
 
     start = time()
     # Reset to known state
-    topo = StarTopo(n=args.n, bw_host=args.bw_host,
-                    delay='%sms' % (args.delay/2),
+    topo = DOSTopo(bw_host=args.bw_host,
+                    delay='%sms' % (args.delay),
                     bw_net=args.bw_net, maxq=args.maxq)
     net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink)
     net.start()
@@ -276,9 +286,11 @@ def main():
 
     cprint("Starting experiment", "green")
 
+    start_senders(net)
+
+    monitor_devs_ng("test", interval_sec=0.01)
     start_attacker(net)
 
-    start_senders(net)
 
     #TODO: measure the throughput of the normal flow(s)
     # and figure out how to plot that like figure 4 in the paper
