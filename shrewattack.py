@@ -118,7 +118,7 @@ parser.add_argument('--length',
 		            dest="length",
 		            type=float,
 		            action="store",
-		            help="Length of attack in ms",
+		            help="Length of attack in sec",
 		            required=True)
 
 # Expt parameters
@@ -255,6 +255,7 @@ def start_receiver(net):
     server = net.get('receiver')
 
     server.popen('%s -s -p %s > %s/iperf_server.txt' % (CUSTOM_IPERF_PATH, 5001, args.dir), shell=True)
+    server.popen('%s -s -u -p %s > %s/iperf_server2.txt' % (CUSTOM_IPERF_PATH, 5001, args.dir), shell=True)
     pass
 
 #TODO: These will be the regular (non-DOS) flows, we can just start with 1
@@ -284,22 +285,9 @@ def start_senders(net):
 #TODO: Start attack flow in a daemon thread to periodically 
 # send 
 def start_attacker(net):
-    #sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM);
-	#TODO: what message to send
-    #MESSAGE = '1' * 1440
-    #while True:
-    #    sleep(args.period)
-    #    start = time()
-        #TODO: correct units?
-    #    while time() - start < args.length:
-    #        sock.sendto(MESSAGE, (net.get('receiver').IP(), 5001))
     receiver = net.get('receiver')
     attacker = net.get('badHost')
-    start = time()
-    while time() - start < 30:
-        sleep(args.period)
-        attacker.popen('iperf -c %s -p %s -t %d -i 0.1 -b 15M -u -yc -Z %s > %s/%s' % (
-                receiver.IP(), 5001, 1, args.cong, args.dir, "attacker_file"),shell=True)
+    attacker.popen('python start_attacker.py -p {0} -l {1} -d {2}'.format(args.period, args.length, receiver.IP()), shell=True)
     return
 
 def avg(s):
@@ -330,9 +318,9 @@ def main():
 
     cprint("Starting experiment", "green")
 
-    #start_senders(net)
+    start_senders(net)
     #wait for them to start up
-    #sleep(10)
+    sleep(10)
     bwmon = start_bwmon(outfile="{0}/{1}-bwm.txt".format(args.dir, args.period))
 
     #rates = get_rates(iface='s0-eth2', nsamples=CALIBRATION_SAMPLES+CALIBRATION_SKIP)
@@ -346,6 +334,7 @@ def main():
     #start_attacker(net)
 
     start_attacker(net)
+    sleep(30)
     
     #TODO: measure the throughput of the normal flow(s)
     # and figure out how to plot that like figure 4 in the paper

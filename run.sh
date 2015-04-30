@@ -22,7 +22,7 @@ plotpath=util
 iperf=~/iperf-patched/src/iperf
 
 for run in 1; do
-for period in 1; do
+for period in 1 2 3 4 5; do
 	dir=$rootdir
 
 	python shrewattack.py --bw-host 15 \
@@ -36,7 +36,7 @@ for period in 1; do
 		#TODO: add extra necessary params
 
 	#TODO: Plot the correct results
-	python $plotpath/plot_rate.py -f $dir/$period.0-bwm.txt -o $dir/$period-plot.png -i "s0-eth3" --rx --maxy 10
+	python $plotpath/plot_rate.py -f $dir/$period.0-bwm.txt -o $dir/$period-plot.png -i "s0-eth2" --rx
 	#python $plotpath/plot_tcpprobe.py -f $dir/tcp_probe.txt -o $dir/cwnd.png --histogram
 done
 done
