@@ -6,8 +6,7 @@ Denial of Service attacks are a common attack that occurs regularly on the Inter
 
 The authors found that a shrew-attack was very efficient and could reduce throughput by a magnitude. The authors then go on to explore ways of detecting and mitigating this effect. One key approach is to use randomized RTO, which reduces the effectiveness of shrew-attacks to almost NULL, since the attacker is unable to predict when the flow has started again. 
 We wanted to simulate the results of the shrew-attack to see if it is as powerful as the authors claim. We think this is particularly interesting because, once again, these attacks exploit the nature of TCP rather than hardware. We begin by testing to see if we are able to constantly deny service to a flow without constantly flooding the server with packets. 
-Our results are found below: 
-
+Unfortunately, we currently do not have results that match the authors. However, we believe that we have the general framework of our code completed, and only have a few bugs to fix. 
 Method
 We create a server that has multiple (one in the initial) switches connecting to it. We also have an attacker switch connected to it. The non-attacking threads will continue to communicate with the server until the router is saturated. Once the router is saturated, the attacker will send data at 2RTTxC (or a value higher than that) to fill up the entire buffer of the server. It will then send at RTTxC for long enough to force the other connections into RTO. It will then stop sending data. This will be repeated over multiple RTO cycles.
 
