@@ -22,13 +22,13 @@ plotpath=util
 iperf=~/iperf-patched/src/iperf
 
 for run in 1; do
-for period in 1 2 3 4 5; do
-	dir=$rootdir/test
+for period in 1; do
+	dir=$rootdir
 
 	python shrewattack.py --bw-host 15 \
 		--cong reno \
 		--bw-net 1.5 \
-		--delay 12 \
+		--delay 6 \
 		--dir $dir \
 		--iperf $iperf \
 		--period $period \
@@ -36,12 +36,12 @@ for period in 1 2 3 4 5; do
 		#TODO: add extra necessary params
 
 	#TODO: Plot the correct results
-	python $plotpath/plot_queue.py -f $dir/qlen_$iface.txt -o $dir/q.png
-	python $plotpath/plot_tcpprobe.py -f $dir/tcp_probe.txt -o $dir/cwnd.png --histogram
+	python $plotpath/plot_rate.py -f $dir/$period.0-bwm.txt -o $dir/$period-plot.png -i "s0-eth3" --rx --maxy 10
+	#python $plotpath/plot_tcpprobe.py -f $dir/tcp_probe.txt -o $dir/cwnd.png --histogram
 done
 done
 
-cat $rootdir/*/result.txt | sort -n -k 1
-python plot-results.py --dir $rootdir -o $rootdir/result.png
+#cat $rootdir/*/result.txt | sort -n -k 1
+#python plot-results.py --dir $rootdir -o $rootdir/result.png
 echo "Started at" $start
 echo "Ended at" `date`

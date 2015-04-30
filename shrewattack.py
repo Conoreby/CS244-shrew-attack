@@ -100,7 +100,7 @@ parser.add_argument('--maxq',
 parser.add_argument('--cong',
                     dest="cong",
                     help="Congestion control algorithm to use",
-                    default="bic")
+                    default="reno")
 
 parser.add_argument('--iperf',
                     dest="iperf",
@@ -153,8 +153,8 @@ class DOSTopo(Topo):
         badHost = self.addHost('badHost')
         receiver = self.addHost('receiver')
         self.addLink(receiver, switch, bw=bw_net, cpu=cpu, max_queue_size=maxq, delay=delay)
-        self.addLink(goodHost, switch, bw=bw_host, cpu=cpu, max_queue_size=maxq)
-        self.addLink(badHost, switch, bw=bw_host, cpu=cpu, max_queue_size=maxq)
+        self.addLink(goodHost, switch, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
+        self.addLink(badHost, switch, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
         return	
 
 def start_tcpprobe():
@@ -166,11 +166,16 @@ def start_tcpprobe():
 def stop_tcpprobe():
     os.system("killall -9 cat; rmmod tcp_probe &>/dev/null;")
 
-def start_bwmon(iface, interval_sec=0.1, outfile="bw.txt"):
-    monitor = Process(target=monitor_devs,
-                      args=(iface, outfile, interval_sec))
-    monitor.start()
-    return monitor
+def start_bwmon(interval_sec=0.1, outfile="bwm.txt"):
+    try:
+        monitor = Process(target=monitor_devs_ng,
+                        args=(outfile, interval_sec))
+        monitor.daemon=True
+        monitor.start()
+    except:
+        raise
+    finally:
+        return monitor
 
 
 
@@ -190,6 +195,22 @@ def get_txbytes(iface):
     # lo: 6175728   53444    0    0    0     0          0         0  6175728   53444    0    0    0     0       0          0
     return float(line.split()[9])
 
+def get_rxbytes(iface):
+    f = open('/proc/net/dev', 'r')
+    lines = f.readlines()
+    for line in lines:
+        if iface in line:
+            break
+    f.close()
+    if not line:
+        raise Exception("could not find iface %s in /proc/net/dev:%s" %
+                        (iface, lines))
+    # Extract TX bytes from:
+    #Inter-|   Receive                                                |  Transmit
+    # face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    # lo: 6175728   53444    0    0    0     0          0         0  6175728   53444    0    0    0     0       0          0
+    return float(line.split()[1])
+
 def get_rates(iface, nsamples=NSAMPLES, period=SAMPLE_PERIOD_SEC,
               wait=SAMPLE_WAIT_SEC):
     """Returns the interface @iface's current utilization in Mb/s.  It
@@ -199,23 +220,23 @@ def get_rates(iface, nsamples=NSAMPLES, period=SAMPLE_PERIOD_SEC,
     # Returning nsamples requires one extra to start the timer.
     nsamples += 1
     last_time = 0
-    last_txbytes = 0
+    last_rxbytes = 0
     ret = []
     sleep(wait)
     while nsamples:
         nsamples -= 1
-        txbytes = get_txbytes(iface)
+        rxbytes = get_rxbytes(iface)
         now = time()
         elapsed = now - last_time
         #if last_time:
         #    print "elapsed: %0.4f" % (now - last_time)
         last_time = now
         # Get rate in Mbps; correct for elapsed time.
-        rate = (txbytes - last_txbytes) * 8.0 / 1e6 / elapsed
-        if last_txbytes != 0:
+        rate = (rxbytes - last_rxbytes) * 8.0 / 1e6 / elapsed
+        if last_rxbytes != 0:
             # Wait for 1 second sample
             ret.append(rate)
-        last_txbytes = txbytes
+        last_rxbytes = rxbytes
         print '.',
         sys.stdout.flush()
         sleep(period)
@@ -256,23 +277,39 @@ def start_senders(net):
     goodHost = net.get('goodHost')
     
     goodHost.cmd('touch {0}/output_file'.format(args.dir))
-    goodHost.popen('%s -c %s -p %s -t %d -yc -Z %s > %s/%s' % (
-            CUSTOM_IPERF_PATH, receiver.IP(), 5001, seconds, args.cong, args.dir, "output_file"),shell=True)
+    goodHost.popen('%s -c %s -p %s -t %d -i 1 -yc -Z %s > %s/%s' % (
+            CUSTOM_IPERF_PATH, receiver.IP(), 5001, seconds, args.cong, args.dir, "{0}-bw.txt".format(args.period)),shell=True)
     return
 
 #TODO: Start attack flow in a daemon thread to periodically 
 # send 
 def start_attacker(net):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM);
+    #sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM);
 	#TODO: what message to send
-    MESSAGE = '1' * 1440
-    while True:
-        sleep(args.period)
-        start = time()
+    #MESSAGE = '1' * 1440
+    #while True:
+    #    sleep(args.period)
+    #    start = time()
         #TODO: correct units?
-        while time() - start < args.length:
-            sock.sendto(MESSAGE, (net.get('receiver').IP(), 5001))
+    #    while time() - start < args.length:
+    #        sock.sendto(MESSAGE, (net.get('receiver').IP(), 5001))
+    receiver = net.get('receiver')
+    attacker = net.get('badHost')
+    start = time()
+    while time() - start < 30:
+        sleep(args.period)
+        attacker.popen('iperf -c %s -p %s -t %d -i 0.1 -b 15M -u -yc -Z %s > %s/%s' % (
+                receiver.IP(), 5001, 1, args.cong, args.dir, "attacker_file"),shell=True)
     return
+
+def avg(s):
+    if ',' in s:
+        lst = [float(f) for f in s.split(',')]
+    elif type(s) == str:
+        lst = [float(s)]
+    elif type(s) == list:
+        lst = s
+    return sum(lst)/len(lst)
 
 def main():
     "Create network and run Buffer Sizing experiment"
@@ -293,18 +330,23 @@ def main():
 
     cprint("Starting experiment", "green")
 
-    start_senders(net)
-    bwmon = start_bwmon(iface='s0-eth2', outfile="{0}/{1}-txrate.txt".format(args.dir, args.period))
+    #start_senders(net)
+    #wait for them to start up
+    #sleep(10)
+    bwmon = start_bwmon(outfile="{0}/{1}-bwm.txt".format(args.dir, args.period))
+
+    #rates = get_rates(iface='s0-eth2', nsamples=CALIBRATION_SAMPLES+CALIBRATION_SKIP)
+    #rates = rates[CALIBRATION_SKIP:]
+    #bw = avg(rates)
+    #print "Bandwidth to normalize to: {0}".format(bw)
+    #sys.stdout.flush()
 
     #monitor_devs(dev_pattern='s0-eth2', fname="{0}/{1}-txrate.txt".format(args.dir, args.period), interval_sec=0.1)
     #monitor_devs_ng(fname="%s/txrate.txt" % args.dir, interval_sec=0.1)
+    #start_attacker(net)
+
     start_attacker(net)
-
-    cprint("I escaped", "red")
-
-    sleep(30)
-
-
+    
     #TODO: measure the throughput of the normal flow(s)
     # and figure out how to plot that like figure 4 in the paper
 

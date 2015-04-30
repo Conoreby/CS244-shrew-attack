@@ -49,13 +49,13 @@ def monitor_count(ipt_args="--src 10.0.0.0/8",
 def monitor_devs(dev_pattern='^s', fname="%s/bytes_sent.txt" %
                  default_dir, interval_sec=0.01):
 
-    """Aggregates (sums) all txed bytes and rate (in Mbps) from
+    """Aggregates (sums) all rxed bytes and rate (in Mbps) from
        devices whose name matches @dev_pattern and writes to @fname"""
     pat = re.compile(dev_pattern)
     spaces = re.compile('\s+')
     print "This is the file name %s" % fname
     open(fname, 'w').write('')
-    prev_tx = {}
+    prev_rx = {}
     while 1:
         lines = open('/proc/net/dev').read().split('\n')
         t = str(time())
@@ -64,9 +64,9 @@ def monitor_devs(dev_pattern='^s', fname="%s/bytes_sent.txt" %
             line = spaces.split(line.strip())
             iface = line[0]
             if pat.match(iface) and len(line) > 9:
-                tx_bytes = int(line[9])
-                total += tx_bytes - prev_tx.get(iface, tx_bytes)
-                prev_tx[iface] = tx_bytes
+                rx_bytes = int(line[1])
+                total += rx_bytes - prev_rx.get(iface, rx_bytes)
+                prev_rx[iface] = rx_bytes
         open(fname, 'a').write(','.join([t,
              str(total * 8 / interval_sec / 1e6), str(total)]) + "\n")
         sleep(interval_sec)
