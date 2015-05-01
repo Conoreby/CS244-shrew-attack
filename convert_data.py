@@ -42,7 +42,7 @@ for row in data:
         
 
 avg = total / count
-normalized = avg / largest
+normalized = avg / 1.5
 
 with open(args.output, "a") as out_file:
     out_file.write(str(args.period) + "," + str(normalized) + "\n")

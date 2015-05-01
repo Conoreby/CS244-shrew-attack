@@ -95,7 +95,7 @@ parser.add_argument('--maxq',
                     dest="maxq",
                     action="store",
                     help="Max buffer size of network interface in packets",
-                    default=1000)
+                    default=100)
 
 parser.add_argument('--cong',
                     dest="cong",
@@ -313,14 +313,16 @@ def main():
 
     cprint("Starting experiment", "green")
 
-    start_senders(net)
     #wait for them to start up
-    sleep(10)
     #TODO get rate to normalize to
+    start_senders(net)
+    host = net.get('goodHost')
+    host.popen("ip route change 10.0.0.0/8 dev %s rto_min %s scope link src %s proto kernel" % ('goodHost-eth0', 1, host.IP()), shell=True).communicate()
+    sleep(10)
     start_attacker(net)
-    bwmon = start_bwmon(outfile="{0}/{1}-bwm.txt".format(args.dir, args.period))
     sleep(30)
-
+    bwmon = start_bwmon(outfile="{0}/{1}-bwm.txt".format(args.dir, args.period))
+    sleep(10)
     # Shut down iperf processes
     os.system('killall -9 ' + CUSTOM_IPERF_PATH)
 

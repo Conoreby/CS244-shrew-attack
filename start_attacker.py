@@ -27,7 +27,6 @@ args = parser.parse_args()
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 MSG = '0' * 1000
-start = time()
 
 while True:
     now = time()
