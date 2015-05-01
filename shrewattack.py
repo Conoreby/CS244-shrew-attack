@@ -138,23 +138,17 @@ class DOSTopo(Topo):
 
     def build(self, cpu=None, bw_host=None, bw_net=None,
 	      delay=None, maxq=None):
-	#TODO: Set up one regular host, one bad host, and shared reciever
-	# connected by a switch
-    #switch = self.addSwitch('server')
-    #server= self.addHost('server')
-    #for h in range(n-1):
-    #    host = self.addHost('h%s' %(h+1)) #host should start at 1
-    #    self.addLink(host, switch, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
-    #	return
-    #host = self.addHost('attacker') 
-    #not sure what parameters are for attacker link
-        switch = self.addSwitch('s0')
+        s0 = self.addSwitch('s0')
+        s1 = self.addSwitch('s1') 
         goodHost = self.addHost('goodHost')
         badHost = self.addHost('badHost')
-        receiver = self.addHost('receiver')
-        self.addLink(receiver, switch, bw=bw_net, cpu=cpu, max_queue_size=maxq, delay=delay)
-        self.addLink(goodHost, switch, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
-        self.addLink(badHost, switch, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
+        goodReceiver = self.addHost('gServer')
+        badReceiver = self.addHost('bServer') 
+        self.addLink(s0, s1, bw=bw_net, cpu=cpu, max_queue_size=maxq, delay=delay)
+        self.addLink(goodHost, s0, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
+        self.addLink(badHost, s0, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
+        self.addLink(goodReceiver, s1, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
+        self.addLink(badReceiver, s1, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
         return	
 
 def start_tcpprobe():
@@ -250,12 +244,13 @@ def get_rates(iface, nsamples=NSAMPLES, period=SAMPLE_PERIOD_SEC,
 # Note: The output file should be <args.dir>/iperf_server.txt
 #       It will be used later in count_connections()
 
-def start_receiver(net):
+def start_receivers(net):
     seconds = 3600
-    server = net.get('receiver')
+    gServer = net.get('gServer')
+    bServer = net.get('bServer')
 
-    server.popen('%s -s -p %s > %s/iperf_server.txt' % (CUSTOM_IPERF_PATH, 5001, args.dir), shell=True)
-    server.popen('%s -s -u -p %s > %s/iperf_server2.txt' % (CUSTOM_IPERF_PATH, 5001, args.dir), shell=True)
+    gServer.popen('%s -s -p %s > %s/iperf_server.txt' % (CUSTOM_IPERF_PATH, 5001, args.dir), shell=True)
+    bServer.popen('%s -s -u -p %s > %s/iperf_server2.txt' % (CUSTOM_IPERF_PATH, 5001, args.dir), shell=True)
     pass
 
 #TODO: These will be the regular (non-DOS) flows, we can just start with 1
@@ -274,7 +269,7 @@ def start_receiver(net):
 def start_senders(net):
     # Seconds to run iperf; keep this very high
     seconds = 3600
-    receiver = net.get('receiver')
+    receiver = net.get('gServer')
     goodHost = net.get('goodHost')
     
     goodHost.cmd('touch {0}/output_file'.format(args.dir))
@@ -285,7 +280,7 @@ def start_senders(net):
 #TODO: Start attack flow in a daemon thread to periodically 
 # send 
 def start_attacker(net):
-    receiver = net.get('receiver')
+    receiver = net.get('bServer')
     attacker = net.get('badHost')
     attacker.popen('python start_attacker.py -p {0} -l {1} -d {2}'.format(args.period, args.length, receiver.IP()), shell=True)
     return
@@ -312,7 +307,7 @@ def main():
     dumpNodeConnections(net.hosts)
     net.pingAll()
 
-    start_receiver(net)
+    start_receivers(net)
 
     start_tcpprobe()
 
@@ -321,23 +316,10 @@ def main():
     start_senders(net)
     #wait for them to start up
     sleep(10)
-    bwmon = start_bwmon(outfile="{0}/{1}-bwm.txt".format(args.dir, args.period))
-
-    #rates = get_rates(iface='s0-eth2', nsamples=CALIBRATION_SAMPLES+CALIBRATION_SKIP)
-    #rates = rates[CALIBRATION_SKIP:]
-    #bw = avg(rates)
-    #print "Bandwidth to normalize to: {0}".format(bw)
-    #sys.stdout.flush()
-
-    #monitor_devs(dev_pattern='s0-eth2', fname="{0}/{1}-txrate.txt".format(args.dir, args.period), interval_sec=0.1)
-    #monitor_devs_ng(fname="%s/txrate.txt" % args.dir, interval_sec=0.1)
-    #start_attacker(net)
-
+    #TODO get rate to normalize to
     start_attacker(net)
+    bwmon = start_bwmon(outfile="{0}/{1}-bwm.txt".format(args.dir, args.period))
     sleep(30)
-    
-    #TODO: measure the throughput of the normal flow(s)
-    # and figure out how to plot that like figure 4 in the paper
 
     # Shut down iperf processes
     os.system('killall -9 ' + CUSTOM_IPERF_PATH)
