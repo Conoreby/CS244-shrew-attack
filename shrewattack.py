@@ -145,7 +145,14 @@ class StarTopo(Topo):
 	      delay=None, maxq=None):
 	#TODO: Set up one regular host, one bad host, and shared reciever
 	# connected by a switch
+    switch = self.addSwitch('server')
+    server= self.addHost('server')
+    for h in range(n-1):
+        host = self.addHost('h%s' %(h+1)) #host should start at 1
+        self.addLink(host, switch, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
     	return
+    host = self.addHost('attacker')
+    #not sure what parameters are for attacker link
 
 def start_tcpprobe():
     "Install tcp_probe module and dump to file"
@@ -206,9 +213,7 @@ def get_rates(iface, nsamples=NSAMPLES, period=SAMPLE_PERIOD_SEC,
     return ret
 
 #TODO: Change this to be the shared reciever
-# TODO: Fill in the following function to
-# Start iperf on the receiver node
-# Hint: use get() to get a handle on the sender node
+#I dont' think we have to change anything here, except maybe the name
 # Hint: iperf command to start the receiver:
 #       '%s -s -p %s > %s/iperf_server.txt' %
 #        (CUSTOM_IPERF_PATH, 5001, args.dir)
@@ -217,13 +222,12 @@ def get_rates(iface, nsamples=NSAMPLES, period=SAMPLE_PERIOD_SEC,
 
 def start_receiver(net):
     seconds = 3600
-    server = net.get('h0')
+    server = net.get('receiver')
 
     server.popen('%s -s -p %s > %s/iperf_server.txt' % (CUSTOM_IPERF_PATH, 5001, args.dir), shell=True)
     pass
 
 #TODO: These will be the regular (non-DOS) flows, we can just start with 1
-# TODO: Fill in the following function to
 # Start args.nflows flows across the senders in a round-robin fashion
 # Hint: use get() to get a handle on the sender (A or B in the
 # figure) and receiver node (C in the figure).
