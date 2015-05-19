@@ -20,7 +20,9 @@ print ratepercentage
 m.rc('figure', figsize=(16, 6))
 fig = figure()
 ax = fig.add_subplot(111)
+plt.title('Shrew-attack TCP throughput')
 plt.plot(ratepercentage)
+plt.xlabel('seconds')
 plt.ylabel("% thoroughput")
 plt.grid(True)
 
