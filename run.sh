@@ -22,11 +22,11 @@ plotpath=util
 iperf=~/iperf-patched/src/iperf
 
 for run in 1; do
-for period in 0.0 1.0 2.0 3.0 4.0 5.0; do
+for period in 0.5 0.6 0.7 0.8 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.5 3.0 3.5 4.0 4.5 5.0; do
 	dir=$rootdir
 
 	python shrewattack.py --bw-host 15 \
-		--cong reno \
+		--cong sack \
 		--bw-net 1.5 \
 		--delay 2 \
 		--dir $dir \

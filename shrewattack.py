@@ -95,7 +95,7 @@ parser.add_argument('--maxq',
                     dest="maxq",
                     action="store",
                     help="Max buffer size of network interface in packets",
-                    default=100)
+                    default=24)
 
 parser.add_argument('--cong',
                     dest="cong",
@@ -108,18 +108,18 @@ parser.add_argument('--iperf',
                     required=True)
 
 parser.add_argument('--period',
-		            dest="period",
-		            type=float,
+		    dest="period",
+		    type=float,
                     action="store",
-		            help="Period between attacks in sec",
-		            required=True)
+		    help="Period between attacks in sec",
+		    required=True)
 
 parser.add_argument('--length',
-		            dest="length",
-		            type=float,
-		            action="store",
-		            help="Length of attack in sec",
-		            required=True)
+		    dest="length",
+		    type=float,
+		    action="store",
+		    help="Length of attack in sec",
+		    required=True)
 
 # Expt parameters
 args = parser.parse_args()
@@ -145,10 +145,10 @@ class DOSTopo(Topo):
         goodReceiver = self.addHost('gServer')
         badReceiver = self.addHost('bServer') 
         self.addLink(s0, s1, bw=bw_net, cpu=cpu, max_queue_size=maxq, delay=delay)
-        self.addLink(goodHost, s0, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
-        self.addLink(badHost, s0, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
-        self.addLink(goodReceiver, s1, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
-        self.addLink(badReceiver, s1, bw=bw_host, cpu=cpu, max_queue_size=maxq, delay=delay)
+        self.addLink(goodHost, s0, bw=bw_host, cpu=cpu, delay=delay)
+        self.addLink(badHost, s0, bw=bw_host, cpu=cpu, delay=delay)
+        self.addLink(goodReceiver, s1, bw=bw_host, cpu=cpu, delay=delay)
+        self.addLink(badReceiver, s1, bw=bw_host, cpu=cpu, delay=delay)
         return	
 
 def start_tcpprobe():
@@ -317,7 +317,7 @@ def main():
     #TODO get rate to normalize to
     start_senders(net)
     host = net.get('goodHost')
-    host.popen("ip route change 10.0.0.0/8 dev %s rto_min %s scope link src %s proto kernel" % ('goodHost-eth0', 1, host.IP()), shell=True).communicate()
+    host.popen("ip route change 10.0.0.0/8 dev %s rto_min %s scope link src %s proto kernel" % ('goodHost-eth0', 0.9, host.IP()), shell=True).communicate()
     sleep(10)
     start_attacker(net)
     sleep(30)
