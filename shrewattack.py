@@ -321,7 +321,7 @@ def main():
     sleep(10)
     start_attacker(net)
     sleep(30)
-    bwmon = start_bwmon(outfile="{0}/{1}-bwm.txt".format(args.dir, args.period))
+    bwmon = start_bwmon(outfile="{0}/{1}-{2}-{3}-bwm.txt".format(args.dir, args.cong, args.length, args.period))
     sleep(10)
     # Shut down iperf processes
     os.system('killall -9 ' + CUSTOM_IPERF_PATH)

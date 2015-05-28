@@ -11,11 +11,21 @@ parser.add_argument('--file', '-f',
                     help="data file",
                     required=True,
                     action="store",
-                    dest="file")
+					nargs='+',
+                    dest="files")
+
+parser.add_argument('-o',
+                    help="Output directory",
+                    required=True,
+                    action="store",
+                    dest="dir")
 
 args = parser.parse_args()
 
-data = read_list(args.file)
+to_plot = []
+
+for file in args.files:
+	data = read_list(file)
 
 #def skip_last(iterator):
 #    prev = next(iterator)
@@ -42,20 +52,20 @@ data = read_list(args.file)
 #		maxv = average
 #	thoroughput.append( avg(rates) )
 #	ifile.close()
+	xs = col(0, data)
+	ys = col(1, data)
+	plt.plot(
 m.rc('figure', figsize=(16, 6))
 fig = figure()
 ax = fig.add_subplot(111)
 #plt.ylim(0, maxv)
 plt.title('Shrew-attack TCP throughput')
 #<<<<<<< 
-xs = col(0, data)
-ys = col(1, data)
-plt.plot(xs, ys)
 plt.xlabel('seconds')
 plt.ylabel("% thoroughput")
 plt.grid(True)
 
-plt.savefig("result.png")
+plt.savefig("{0}/result.png".format(args.dir))
 #=======
 #plt.plot(intervals, thoroughput)
 #plt.xlabel('seconds')
