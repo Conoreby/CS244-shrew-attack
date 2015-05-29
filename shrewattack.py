@@ -24,32 +24,6 @@ from util.monitor import monitor_devs
 from util.helper import stdev
 
 
-# Number of samples to skip for reference util calibration.
-CALIBRATION_SKIP = 10
-
-# Number of samples to grab for reference util calibration.
-CALIBRATION_SAMPLES = 30
-
-# Set the fraction of the link utilization that the measurement must exceed
-# to be considered as having enough buffering.
-TARGET_UTIL_FRACTION = 0.98
-
-# Fraction of input bandwidth required to begin the experiment.
-# At exactly 100%, the experiment may take awhile to start, or never start,
-# because it effectively requires waiting for a measurement or link speed
-# limiting error.
-START_BW_FRACTION = 0.9
-
-# Number of samples to take in get_rates() before returning.
-NSAMPLES = 3
-
-# Time to wait between samples, in seconds, as a float.
-SAMPLE_PERIOD_SEC = 1.0
-
-# Time to wait for first sample, in seconds, as a float.
-SAMPLE_WAIT_SEC = 3.0
-
-
 def cprint(s, color, cr=True):
     """Print in color
        s: string to print
@@ -172,72 +146,6 @@ def start_bwmon(interval_sec=0.1, outfile="bwm.txt"):
         return monitor
 
 
-
-def get_txbytes(iface):
-    f = open('/proc/net/dev', 'r')
-    lines = f.readlines()
-    for line in lines:
-        if iface in line:
-            break
-    f.close()
-    if not line:
-        raise Exception("could not find iface %s in /proc/net/dev:%s" %
-                        (iface, lines))
-    # Extract TX bytes from:
-    #Inter-|   Receive                                                |  Transmit
-    # face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
-    # lo: 6175728   53444    0    0    0     0          0         0  6175728   53444    0    0    0     0       0          0
-    return float(line.split()[9])
-
-def get_rxbytes(iface):
-    f = open('/proc/net/dev', 'r')
-    lines = f.readlines()
-    for line in lines:
-        if iface in line:
-            break
-    f.close()
-    if not line:
-        raise Exception("could not find iface %s in /proc/net/dev:%s" %
-                        (iface, lines))
-    # Extract TX bytes from:
-    #Inter-|   Receive                                                |  Transmit
-    # face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
-    # lo: 6175728   53444    0    0    0     0          0         0  6175728   53444    0    0    0     0       0          0
-    return float(line.split()[1])
-
-def get_rates(iface, nsamples=NSAMPLES, period=SAMPLE_PERIOD_SEC,
-              wait=SAMPLE_WAIT_SEC):
-    """Returns the interface @iface's current utilization in Mb/s.  It
-    returns @nsamples samples, and each sample is the average
-    utilization measured over @period time.  Before measuring it waits
-    for @wait seconds to 'warm up'."""
-    # Returning nsamples requires one extra to start the timer.
-    nsamples += 1
-    last_time = 0
-    last_rxbytes = 0
-    ret = []
-    sleep(wait)
-    while nsamples:
-        nsamples -= 1
-        rxbytes = get_rxbytes(iface)
-        now = time()
-        elapsed = now - last_time
-        #if last_time:
-        #    print "elapsed: %0.4f" % (now - last_time)
-        last_time = now
-        # Get rate in Mbps; correct for elapsed time.
-        rate = (rxbytes - last_rxbytes) * 8.0 / 1e6 / elapsed
-        if last_rxbytes != 0:
-            # Wait for 1 second sample
-            ret.append(rate)
-        last_rxbytes = rxbytes
-        print '.',
-        sys.stdout.flush()
-        sleep(period)
-    return ret
-
-#TODO: Change this to be the shared reciever
-#I dont' think we have to change anything here, except maybe the name
 # Hint: iperf command to start the receiver:
 #       '%s -s -p %s > %s/iperf_server.txt' %
 #        (CUSTOM_IPERF_PATH, 5001, args.dir)
@@ -253,20 +161,7 @@ def start_receivers(net):
     bServer.popen('%s -s -u -p %s > %s/iperf_server2.txt' % (CUSTOM_IPERF_PATH, 5001, args.dir), shell=True)
     pass
 
-#TODO: These will be the regular (non-DOS) flows, we can just start with 1
-# Start args.nflows flows across the senders in a round-robin fashion
-# Hint: use get() to get a handle on the sender (A or B in the
-# figure) and receiver node (C in the figure).
-# Hint: iperf command to start flow:
-#       '%s -c %s -p %s -t %d -i 1 -yc -Z %s > %s/%s' % (
-#           CUSTOM_IPERF_PATH, server.IP(), 5001, seconds, args.cong, args.dir, output_file)
-# It is a good practice to store output files in a place specific to the
-# experiment, where you can easily access, e.g., under args.dir.
-# It will be very handy when debugging.  You are not required to
-# submit these in your final submission.
-
-#TODO: make this for multiple flows instead of the hard coded 1
-def start_senders(net):
+def start_sender(net):
     # Seconds to run iperf; keep this very high
     seconds = 3600
     receiver = net.get('gServer')
@@ -313,11 +208,10 @@ def main():
 
     cprint("Starting experiment", "green")
 
-    #wait for them to start up
-    #TODO get rate to normalize to
-    start_senders(net)
+    start_sender(net)
     host = net.get('goodHost')
     host.popen("ip route change 10.0.0.0/8 dev %s rto_min %s scope link src %s proto kernel" % ('goodHost-eth0', 0.9, host.IP()), shell=True).communicate()
+    #wait for iperf tcp to start
     sleep(10)
     start_attacker(net)
     sleep(10)
