@@ -320,7 +320,7 @@ def main():
     host.popen("ip route change 10.0.0.0/8 dev %s rto_min %s scope link src %s proto kernel" % ('goodHost-eth0', 0.9, host.IP()), shell=True).communicate()
     sleep(10)
     start_attacker(net)
-    sleep(30)
+    sleep(10)
     bwmon = start_bwmon(outfile="{0}/{1}-{2}-{3}-bwm.txt".format(args.dir, args.cong, args.length, args.period))
     sleep(10)
     # Shut down iperf processes

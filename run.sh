@@ -22,8 +22,8 @@ plotpath=util
 iperf=~/iperf-patched/src/iperf
 
 for run in 1; do
-for cong in reno newreno tahoe sack; do
-for length in 0.03; do
+for cong in reno cubic vegas; do
+for length in 0.03 0.09; do
 for period in 0.5 0.6 0.7 0.8 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0; do
 	dir=$rootdir
 
