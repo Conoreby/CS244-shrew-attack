@@ -24,42 +24,17 @@ args = parser.parse_args()
 
 to_plot = []
 
+
+cong = ['reno', 'newreno', 'tahoe', 'sack']
+graphfiles = []
 for file in args.files:
-	data = read_list(file)
-
-#def skip_last(iterator):
-#    prev = next(iterator)
-#    for item in iterator:
-#        yield prev
-#        prev = item
-
-#thoroughput = []
-#iterate over all graphs
-#intervals = [1.0, 2.0, 3.0, 4.0, 5.0]
-#maxv = 0
-#for l in intervals:
-#	print "test" 
-#	rates = []
-#	ifile = open('shrewattack-Apr30-08:21/'+str(l)+'-bwm.txt', "rb")
-#	reader = csv.reader(ifile)
-#	for row in skip_last(reader):
-#		rates.append(float(row[3]))
-	#remove first 20
-	#rates=rates:[20:]
-#	average = sum(rates)
-#	average = average / float(len(rates))
-#	if maxv < average:
-#		maxv = average
-#	thoroughput.append( avg(rates) )
-#	ifile.close()
-	xs = col(0, data)
-	ys = col(1, data)
-	plt.plot(
-m.rc('figure', figsize=(16, 6))
-fig = figure()
-ax = fig.add_subplot(111)
-#plt.ylim(0, maxv)
+     for tcptype in cong:
+          data = read_list(file + '/' + tcptype + '-0.03-raw_data.txt')
+          xs = col(0, data)
+          ys = col(1, data)
+          plt.plot(xs, ys)
 plt.title('Shrew-attack TCP throughput')
+plt.legend(['reno', 'newreno', 'tahoe', 'sack'], loc='upper left')
 #<<<<<<< 
 plt.xlabel('seconds')
 plt.ylabel("% thoroughput")
