@@ -95,7 +95,7 @@ parser.add_argument('--maxq',
                     dest="maxq",
                     action="store",
                     help="Max buffer size of network interface in packets",
-                    default=24)
+                    default=15)
 
 parser.add_argument('--cong',
                     dest="cong",
@@ -301,7 +301,7 @@ def main():
     # Reset to known state
     topo = DOSTopo(bw_host=args.bw_host,
                     delay='%sms' % (args.delay),
-                    bw_net=args.bw_net, maxq=args.maxq)
+                    bw_net=args.bw_net, maxq=int(args.maxq))
     net = Mininet(topo=topo, host=CPULimitedHost, link=TCLink)
     net.start()
     dumpNodeConnections(net.hosts)

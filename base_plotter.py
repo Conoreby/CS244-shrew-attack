@@ -23,8 +23,8 @@ args = parser.parse_args()
 to_plot = []
 
 
-cong = ['reno', 'cubic', 'vegas']
-bursts = ['0.05']
+cong = ['reno']
+bursts = ['0.15']
 graphfiles = []
 for burst in bursts:
 	for tcptype in cong:
@@ -37,4 +37,4 @@ for burst in bursts:
 	plt.xlabel('seconds')
 	plt.ylabel("% thoroughput")
 	plt.grid(True)
-	plt.savefig("{0}/{1}-result.png".format(args.dir, burst))
+	plt.savefig("{0}/base-result.png".format(args.dir))
