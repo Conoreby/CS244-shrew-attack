@@ -17,7 +17,8 @@ How to reproduce results:
 $ cd CS244-shrew-attack
 $ sudo ./run.sh
 ```
-NOTE: Running the tests will take about 2hrs 30mins
+NOTE: Running the tests will take about 2hrs 30mins or more depending on AWS load.
+Running in the background may cause issues, so to be safe run the script in the foreground.
 
 Plots will be output in a new directory named shrewattack-*timestamp*
 
